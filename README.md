@@ -1,27 +1,62 @@
-<h1 align="center">
-  <br>
-  <a href="https://github.com/geocine/phaser3-rollup-typescript#readme"><img src="https://i.imgur.com/6lcIxDs.png" alt="header" width="600"/></a>
-  <br>
-  Phaser 3 TypeScript Starter
-  <br>
-</h1>
+# Gem Match Game
+#### Это простая игра-головоломка "Три в ряд", написанная с использованием Phaser. Игрок может перемещать драгоценные камни, чтобы образовывать ряды из трех или более одинаковых камней, которые затем исчезают, а сверху появляются новые.
 
-This is a [Phaser 3](https://github.com/photonstorm/phaser) starter with [TypeScript](https://www.typescriptlang.org/), [Rollup](https://rollupjs.org) with ⚡️ lightning fast HMR through [Vite](https://vitejs.dev/).
+## Требования
+### Phaser 3 — для запуска игры требуется библиотека Phaser 3.
+#### Node.js и npm (опционально) — для сборки и запуска игры на локальном сервере.
 
-## Available Commands
+## Установка
+Клонируйте репозиторий:
 
-| Command | Description |
-|---------|-------------|
-| `yarn install` | Install project dependencies |
-| `yarn dev` | Builds project and open web server, watching for changes |
-| `yarn build` | Builds code bundle with production settings  |
-| `yarn serve` | Run a web server to serve built code bundle |
 
-## Development
+```bash
+git clone https://github.com/username/gem-match-game.git
+cd gem-match-game
+```
+### Установите зависимости:
 
-After cloning the repo, run `yarn install` from your project directory. Then, you can start the local development
-server by running `yarn dev` and navigate to http://localhost:3000.
+```bash
+npm install
+```
+#### Запустите локальный сервер для разработки:
 
-## Production
+```bash
+npm start
+```
+#### После этого игра будет доступна по адресу http://localhost:8080.
 
-After running `yarn build`, the files you need for production will be on the `dist` folder. To test code on your `dist` folder, run `yarn serve` and navigate to http://localhost:5000
+# Правила игры
+#### Игрок может перемещать драгоценные камни, чтобы создавать горизонтальные или вертикальные ряды из трех или более одинаковых камней. После создания ряда камни исчезают, а сверху появляются новые.
+
+## Основные функции
+#### Перемещение камней: Реализовано через функции gemSelect, startSwipe и stopSwipe, которые обрабатывают ввод пользователя и выполняют обмен камнями.
+#### Проверка совпадений: Игра автоматически проверяет наличие совпадений после каждого обмена камней.
+#### Удаление совпадений: Когда совпадения найдены, камни исчезают с анимацией, а пустые места заполняются новыми камнями.
+#### Подсчет очков: Количество совпадений отслеживается, и за каждый третий успешный ход начисляется дополнительное очко.
+## Структура кода
+#### Gem: Интерфейс для описания объекта камня, его цвета, состояния и спрайта.
+#### gameOptions: Параметры конфигурации игры, такие как размер поля, количество цветов, размер камней и скорости анимаций.
+#### Методы и события:
+#### drawField: Создает игровое поле и заполняет его случайными камнями.
+#### gemSelect: Позволяет игроку выбирать камни для перемещения.
+#### isMatch, isHorizontalMatch, и isVerticalMatch: Проверка на наличие совпадений.
+#### swapGems: Обмен выбранных камней.
+#### destroyGems: Уничтожает совпавшие камни.
+#### makeGemsFall и replenishField: Обновляют игровое поле, заполняя пустые места новыми камнями.
+## Настройка
+### Все основные настройки находятся в объекте gameOptions:
+
+#### fieldSize: Размер игрового поля.
+#### gemColors: Количество различных цветов камней.
+#### gemSize: Размер каждого камня.
+#### swapSpeed: Скорость анимации обмена.
+#### fallSpeed: Скорость анимации падения камней.
+#### destroySpeed: Скорость анимации исчезновения совпавших камней.
+Лицензия
+# Этот проект находится под лицензией MIT.
+
+
+
+
+
+
