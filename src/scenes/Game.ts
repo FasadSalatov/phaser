@@ -1,4 +1,4 @@
-import Phaser, { Scene, GameObjects } from 'phaser';
+import Phaser, { GameObjects, Scene } from 'phaser';
 
 type Direction = 1 | 2;
 
@@ -66,7 +66,7 @@ export default class Demo extends Scene {
           'gems'
         );
         this.gemGroup.add(gem);
-        
+
         // Устанавливаем случайный цвет до тех пор, пока не будет совпадений
         let randomColor;
         do {
@@ -187,9 +187,9 @@ export default class Demo extends Scene {
   }
 
   // Метод для обмена местами двух камней (определение отсутствует в коде)
- 
 
-  swapGems(gem1: any, gem2: any, swapBack: boolean) {
+
+  swapGems(gem1: number, gem2: number, swapBack: boolean) {
     // Начинаем процесс обмена камней, блокируем взаимодействие с игровым полем
     this.swappingGems = 2;
     this.canPick = false;
@@ -216,230 +216,224 @@ export default class Demo extends Scene {
     // Запускаем анимацию обмена для каждого камня
     this.tweenGem(gem1, gem2, swapBack);
     this.tweenGem(gem2, gem1, swapBack);
-}
+  }
 
-tweenGem(gem1: any, gem2: any, swapBack: boolean) {
+  tweenGem(gem1: number, gem2: number, swapBack: boolean) {
     const row = this.getGemRow(gem1);
     const col = this.getGemCol(gem1);
 
     // Анимация для передвижения камня к новой позиции
     this.tweens.add({
-        targets: this.gameArray[row][col].gemSprite,
-        x: col * gameOptions.gemSize + gameOptions.gemSize / 2,
-        y: row * gameOptions.gemSize + gameOptions.gemSize / 2,
-        duration: gameOptions.swapSpeed,
-        callbackScope: this,
-        onComplete: () => {
-            this.swappingGems--;
+      targets: this.gameArray[row][col].gemSprite,
+      x: col * gameOptions.gemSize + gameOptions.gemSize / 2,
+      y: row * gameOptions.gemSize + gameOptions.gemSize / 2,
+      duration: gameOptions.swapSpeed,
+      callbackScope: this,
+      onComplete: () => {
+        this.swappingGems--;
 
-            // Проверяем завершение анимации обмена
-            if (this.swappingGems === 0) {
-                if (!this.matchInBoard() && swapBack) {
-                    // Если нет совпадений, возвращаем камни на исходные позиции
-                    this.swapGems(gem1, gem2, false);
-                } else {
-                    // Если есть совпадения, обрабатываем их
-                    this.matchInBoard() ? this.handleMatches() : this.enablePicking();
-                }
-            }
+        // Проверяем завершение анимации обмена
+        if (this.swappingGems === 0) {
+          if (!this.matchInBoard() && swapBack) {
+            // Если нет совпадений, возвращаем камни на исходные позиции
+            this.swapGems(gem1, gem2, false);
+          } else {
+            // Если есть совпадения, обрабатываем их
+            this.matchInBoard() ? this.handleMatches() : this.enablePicking();
+          }
         }
+      }
     });
-}
+  }
 
-enablePicking() {
+  enablePicking() {
     this.canPick = true;
     this.selectedGem = null;
-}
+  }
 
-matchInBoard() {
+  matchInBoard() {
     // Проверяем наличие совпадений на игровом поле
     for (let i = 0; i < gameOptions.fieldSize; i++) {
-        for (let j = 0; j < gameOptions.fieldSize; j++) {
-            if (this.isMatch(i, j)) return true;
-        }
+      for (let j = 0; j < gameOptions.fieldSize; j++) {
+        if (this.isMatch(i, j)) return true;
+      }
     }
     return false;
-}
+  }
 
-handleMatches() {
+  handleMatches() {
     // Инициализируем массив для отслеживания совпадений
     this.removeMap = Array.from({ length: gameOptions.fieldSize }, () => Array(gameOptions.fieldSize).fill(0));
     this.markMatches(HORIZONTAL);
     this.markMatches(VERTICAL);
     this.destroyGems();
-}
+  }
 
-markMatches(direction: any) {
+  markMatches(direction: number) {
     // Ищем и отмечаем серии совпадений по заданному направлению
     for (let i = 0; i < gameOptions.fieldSize; i++) {
-        let colorStreak = 1, currentColor = -1, startStreak = 0;
+      let colorStreak = 1, currentColor = -1, startStreak = 0;
 
-        for (let j = 0; j < gameOptions.fieldSize; j++) {
-            const colorToWatch = (direction === HORIZONTAL) ? this.gemAt(i, j).gemColor : this.gemAt(j, i).gemColor;
+      for (let j = 0; j < gameOptions.fieldSize; j++) {
+        const colorToWatch = (direction === HORIZONTAL) ? this.gemAt(i, j).gemColor : this.gemAt(j, i).gemColor;
 
-            if (colorToWatch === currentColor) {
-                colorStreak++;
-            } else {
-                if (colorStreak >= 3) {
-                    // Если найдена серия, отмечаем совпадения в removeMap
-                    this.updateRemoveMap(i, startStreak, colorStreak, direction);
-                }
-                startStreak = j;
-                colorStreak = 1;
-                currentColor = colorToWatch;
-            }
-        }
-
-        if (colorStreak >= 3) {
-            this.updateRemoveMap(i, startStreak, colorStreak, direction);
-        }
-    }
-}
-
-updateRemoveMap(i: number, startStreak: number, colorStreak: number, direction: any) {
-    for (let k = 0; k < colorStreak; k++) {
-        if (direction === HORIZONTAL) {
-            this.removeMap[i][startStreak + k]++;
+        if (colorToWatch === currentColor) {
+          colorStreak++;
         } else {
-            this.removeMap[startStreak + k][i]++;
+          if (colorStreak >= 3) {
+            // Если найдена серия, отмечаем совпадения в removeMap
+            this.updateRemoveMap(i, startStreak, colorStreak, direction);
+          }
+          startStreak = j;
+          colorStreak = 1;
+          currentColor = colorToWatch;
         }
-    }
-}
+      }
 
-destroyGems() {
+      if (colorStreak >= 3) {
+        this.updateRemoveMap(i, startStreak, colorStreak, direction);
+      }
+    }
+  }
+
+  updateRemoveMap(i: number, startStreak: number, colorStreak: number, direction: number) {
+    for (let k = 0; k < colorStreak; k++) {
+      if (direction === HORIZONTAL) {
+        this.removeMap[i][startStreak + k]++;
+      } else {
+        this.removeMap[startStreak + k][i]++;
+      }
+    }
+  }
+
+  destroyGems() {
     // Обновляем счетчик совпадений и при необходимости увеличиваем множитель игрока
     this.matches++;
     if (this.matches % 3 === 0) {
-        this.userScore++;
-        // store.dispatch(actions.setUserMultiplier(this.userScore)); // Предполагаемое обновление UI
+      this.userScore++;
+      // store.dispatch(actions.setUserMultiplier(this.userScore)); // Предполагаемое обновление UI
     }
 
     // Удаление совпавших камней с анимацией
     let destroyed = 0;
     for (let i = 0; i < gameOptions.fieldSize; i++) {
-        for (let j = 0; j < gameOptions.fieldSize; j++) {
-            if (this.removeMap[i][j] > 0) {
-                destroyed++;
-                this.tweens.add({
-                    targets: this.gameArray[i][j].gemSprite,
-                    alpha: 0,
-                    duration: gameOptions.destroySpeed,
-                    callbackScope: this,
-                    onComplete: () => {
-                        destroyed--;
-                        this.gameArray[i][j].gemSprite.visible = false;
-                        this.poolArray.push(this.gameArray[i][j].gemSprite);
-
-                        // Заполняем поле новыми камнями после завершения уничтожения
-                        if (destroyed === 0) {
-                            this.makeGemsFall();
-                            this.replenishField();
-                        }
-                    }
-                });
-                this.gameArray[i][j].isEmpty = true;
-            }
-        }
-    }
-}
-
-makeGemsFall() {
-  // Проходим по игровому полю, начиная с предпоследней строки
-  for (let i = gameOptions.fieldSize - 2; i >= 0; i--) {
       for (let j = 0; j < gameOptions.fieldSize; j++) {
-          // Проверяем, не пустая ли ячейка
-          if (!this.gameArray[i][j].isEmpty) {
-              const fallTiles = this.holesBelow(i, j); // Находим количество пустых ячеек ниже
+        if (this.removeMap[i][j] > 0) {
+          destroyed++;
+          this.tweens.add({
+            targets: this.gameArray[i][j].gemSprite,
+            alpha: 0,
+            duration: gameOptions.destroySpeed,
+            callbackScope: this,
+            onComplete: () => {
+              destroyed--;
+              this.gameArray[i][j].gemSprite.visible = false;
+              this.poolArray.push(this.gameArray[i][j].gemSprite);
 
-              if (fallTiles > 0) {
-                  // Анимация падения камня на количество пустых ячеек ниже
-                  this.tweens.add({
-                      targets: this.gameArray[i][j].gemSprite,
-                      y: this.gameArray[i][j].gemSprite.y + fallTiles * gameOptions.gemSize,
-                      duration: gameOptions.fallSpeed * fallTiles
-                  });
-
-                  // Перемещаем камень в новую позицию и отмечаем ячейку как заполненную
-                  this.gameArray[i + fallTiles][j] = {
-                      gemSprite: this.gameArray[i][j].gemSprite,
-                      gemColor: this.gameArray[i][j].gemColor,
-                      isEmpty: false
-                  };
-                  this.gameArray[i][j].isEmpty = true; // Отмечаем старую позицию как пустую
+              // Заполняем поле новыми камнями после завершения уничтожения
+              if (destroyed === 0) {
+                this.makeGemsFall();
+                this.replenishField();
               }
-          }
+            }
+          });
+          this.gameArray[i][j].isEmpty = true;
+        }
       }
+    }
   }
-}
 
-holesBelow(row: number, col: number): number {
-  // Подсчитываем количество пустых ячеек ниже текущей позиции
-  let result = 0;
-  for (let i = row + 1; i < gameOptions.fieldSize; i++) {
-      if (this.gameArray[i][col].isEmpty) result++;
-  }
-  return result;
-}
-
-replenishField() {
-  let replenished = 0; // Счётчик для отслеживания количества добавленных камней
-
-  // Заполняем пустые позиции в каждой колонке
-  for (let j = 0; j < gameOptions.fieldSize; j++) {
-      const emptySpots = this.holesInCol(j); // Количество пустых ячеек в колонке
-
-      if (emptySpots > 0) {
-          for (let i = 0; i < emptySpots; i++) {
-              replenished++;
-
-              // Генерация нового камня с случайным цветом
-              const randomColor = Phaser.Math.Between(0, gameOptions.gemColors - 1);
-              this.gameArray[i][j].gemColor = randomColor;
-              this.gameArray[i][j].gemSprite = this.poolArray.pop();
-              this.gameArray[i][j].gemSprite.setFrame(randomColor);
-              this.gameArray[i][j].gemSprite.visible = true;
-              this.gameArray[i][j].gemSprite.x = gameOptions.gemSize * j + gameOptions.gemSize / 2;
-              this.gameArray[i][j].gemSprite.y = gameOptions.gemSize / 2 - (emptySpots - i) * gameOptions.gemSize;
-              this.gameArray[i][j].gemSprite.alpha = 1;
-              this.gameArray[i][j].isEmpty = false;
-
-              // Анимация падения нового камня на своё место
-              this.tweens.add({
-                  targets: this.gameArray[i][j].gemSprite,
-                  y: gameOptions.gemSize * i + gameOptions.gemSize / 2,
-                  duration: gameOptions.fallSpeed * emptySpots,
-                  callbackScope: this,
-                  onComplete: () => {
-                      replenished--;
-                      if (replenished === 0) {
-                          // Если в поле есть совпадения, обрабатываем их; иначе разрешаем новые действия
-                          this.matchInBoard() ? this.scheduleMatchCheck() : this.enablePicking();
-                      }
-                  }
-              });
+  makeGemsFall() {
+    for (let i = gameOptions.fieldSize - 2; i >= 0; i--) {
+      for (let j = 0; j < gameOptions.fieldSize; j++) {
+        if (!this.gameArray[i][j].isEmpty) {
+          let fallTiles = this.holesBelow(i, j)
+          if (fallTiles > 0) {
+            this.tweens.add({
+              targets: this.gameArray[i][j].gemSprite,
+              y: this.gameArray[i][j].gemSprite.y + fallTiles * gameOptions.gemSize,
+              duration: gameOptions.fallSpeed * fallTiles
+            })
+            this.gameArray[i + fallTiles][j] = {
+              gemSprite: this.gameArray[i][j].gemSprite,
+              gemColor: this.gameArray[i][j].gemColor,
+              isEmpty: false
+            }
+            this.gameArray[i][j].isEmpty = true
           }
+        }
       }
+    }
   }
-}
-
-scheduleMatchCheck() {
-  this.time.addEvent({
-      delay: 250,
-      callback: this.handleMatches.bind(this)
-  });
-}
-
-enablePicking() {
-  this.canPick = true;
-  this.selectedGem = null;
-}
-
-holesInCol(col: number): number {
-  // Подсчитываем количество пустых ячеек в заданной колонке
-  let result = 0;
-  for (let i = 0; i < gameOptions.fieldSize; i++) {
-      if (this.gameArray[i][col].isEmpty) result++;
+  holesBelow(row: number, col: number) {
+    let result = 0
+    for (let i = row + 1; i < gameOptions.fieldSize; i++) {
+      if (this.gameArray[i][col].isEmpty) {
+        result++
+      }
+    }
+    return result
   }
-  return result;
-}
+  replenishField() {
+    let replenished = 0;
+
+    const animateGemFall = (gemSprite, targetY, emptySpots) => {
+      this.tweens.add({
+        targets: gemSprite,
+        y: targetY,
+        duration: gameOptions.fallSpeed * emptySpots,
+        callbackScope: this,
+        onComplete: () => onGemFallComplete(),
+      });
+    };
+
+    const setupGem = (i, j, emptySpots) => {
+      replenished++;
+      const randomColor = Phaser.Math.Between(0, gameOptions.gemColors - 1);
+      const { gemSize } = gameOptions;
+
+      this.gameArray[i][j].gemColor = randomColor;
+      this.gameArray[i][j].gemSprite = this.poolArray.pop();
+      this.gameArray[i][j].gemSprite.setFrame(randomColor);
+      this.gameArray[i][j].gemSprite.visible = true;
+      this.gameArray[i][j].gemSprite.x = gemSize * j + gemSize / 2;
+      this.gameArray[i][j].gemSprite.y = gemSize / 2 - (emptySpots - i) * gemSize;
+      this.gameArray[i][j].gemSprite.alpha = 1;
+      this.gameArray[i][j].isEmpty = false;
+
+      animateGemFall(this.gameArray[i][j].gemSprite, gemSize * i + gemSize / 2, emptySpots);
+    };
+
+    const onGemFallComplete = () => {
+      replenished--;
+      if (replenished === 0) {
+        if (this.matchInBoard()) {
+          this.time.addEvent({
+            delay: 250,
+            callback: () => this.handleMatches(),
+          });
+        } else {
+          this.canPick = true;
+          this.selectedGem = null;
+        }
+      }
+    };
+
+    for (let j = 0; j < gameOptions.fieldSize; j++) {
+      const emptySpots = this.holesInCol(j);
+      for (let i = 0; i < emptySpots; i++) {
+        setupGem(i, j, emptySpots);
+      }
+    }
+  }
+
+  holesInCol(col: number) {
+    var result = 0
+    for (let i = 0; i < gameOptions.fieldSize; i++) {
+      if (this.gameArray[i][col].isEmpty) {
+        result++
+      }
+    }
+    return result
+  }
 }
