@@ -108,59 +108,89 @@ export default class Demo extends Scene {
     return this.gameArray[row][col];
   }
 
-  gemSelect(pointer: Phaser.Input.Pointer) {
-    if (this.canPick) {
-      this.dragging = true;
-      const row = Math.floor(pointer.y / gameOptions.gemSize);
-      const col = Math.floor(pointer.x / gameOptions.gemSize);
-      const pickedGem = this.gemAt(row, col);
+gemSelect(pointer: Phaser.Input.Pointer) {
+  if (!this.canPick) return;
 
-      if (pickedGem) {
-        if (this.selectedGem === null) {
-          pickedGem.gemSprite.setScale(1.2);
-          pickedGem.gemSprite.setDepth(1);
-          this.selectedGem = pickedGem;
-        } else {
-          if (this.areTheSame(pickedGem, this.selectedGem)) {
-            this.selectedGem.gemSprite.setScale(1);
-            this.selectedGem = null;
-          } else if (this.areNext(pickedGem, this.selectedGem)) {
-            this.selectedGem.gemSprite.setScale(1);
-            this.swapGems(this.selectedGem, pickedGem, true);
-          } else {
-            this.selectedGem.gemSprite.setScale(1);
-            pickedGem.gemSprite.setScale(1.2);
-            this.selectedGem = pickedGem;
-          }
-        }
-      }
+  this.dragging = true;
+  const row = Math.floor(pointer.y / gameOptions.gemSize);
+  const col = Math.floor(pointer.x / gameOptions.gemSize);
+  const pickedGem = this.gemAt(row, col);
+
+  if (pickedGem) {
+    if (!this.selectedGem) {
+      this.selectGem(pickedGem);
+    } else {
+      this.handleSelectedGem(pickedGem);
     }
   }
+}
+
+selectGem(gem: any) {
+  gem.gemSprite.setScale(1.2);
+  gem.gemSprite.setDepth(1);
+  this.selectedGem = gem;
+}
+
+deselectGem() {
+  if (this.selectedGem) {
+    this.selectedGem.gemSprite.setScale(1);
+    this.selectedGem = null;
+  }
+}
+
+handleSelectedGem(pickedGem: any) {
+  if (this.areTheSame(pickedGem, this.selectedGem)) {
+    this.deselectGem();
+  } else if (this.areNext(pickedGem, this.selectedGem)) {
+    this.selectedGem.gemSprite.setScale(1);
+    this.swapGems(this.selectedGem, pickedGem, true);
+  } else {
+    this.deselectGem();
+    this.selectGem(pickedGem);
+  }
+}
+
 
   startSwipe(pointer: Phaser.Input.Pointer) {
-    if (this.dragging && this.selectedGem) {
-      const deltaX = pointer.downX - pointer.x;
-      const deltaY = pointer.downY - pointer.y;
-      let deltaRow = 0;
-      let deltaCol = 0;
-
-      if (deltaX > gameOptions.gemSize / 2 && Math.abs(deltaY) < gameOptions.gemSize / 4) deltaCol = -1;
-      if (deltaX < -gameOptions.gemSize / 2 && Math.abs(deltaY) < gameOptions.gemSize / 4) deltaCol = 1;
-      if (deltaY > gameOptions.gemSize / 2 && Math.abs(deltaX) < gameOptions.gemSize / 4) deltaRow = -1;
-      if (deltaY < -gameOptions.gemSize / 2 && Math.abs(deltaX) < gameOptions.gemSize / 4) deltaRow = 1;
-
-      if (deltaRow || deltaCol) {
-        const pickedGem = this.gemAt(
-          this.getGemRow(this.selectedGem) + deltaRow,
-          this.getGemCol(this.selectedGem) + deltaCol
-        );
-        if (pickedGem) {
-          this.selectedGem.gemSprite.setScale(1);
-          this.swapGems(this.selectedGem, pickedGem, true);
-        }
+    if (!this.dragging || !this.selectedGem) return;
+  
+    const deltaX = pointer.downX - pointer.x;
+    const deltaY = pointer.downY - pointer.y;
+  
+    // Определяем изменения в строке и столбце на основе свайпа
+    const delta = this.getSwipeDelta(deltaX, deltaY);
+  
+    if (delta.row !== 0 || delta.col !== 0) {
+      const targetGem = this.gemAt(
+        this.getGemRow(this.selectedGem) + delta.row,
+        this.getGemCol(this.selectedGem) + delta.col
+      );
+  
+      if (targetGem) {
+        this.selectedGem.gemSprite.setScale(1);
+        this.swapGems(this.selectedGem, targetGem, true);
       }
     }
   }
+  
+  getSwipeDelta(deltaX: number, deltaY: number) {
+    const delta = { row: 0, col: 0 };
+  
+    if (deltaX > gameOptions.gemSize / 2 && Math.abs(deltaY) < gameOptions.gemSize / 4) {
+      delta.col = -1; // Swipe left
+    } else if (deltaX < -gameOptions.gemSize / 2 && Math.abs(deltaY) < gameOptions.gemSize / 4) {
+      delta.col = 1; // Swipe right
+    }
+  
+    if (deltaY > gameOptions.gemSize / 2 && Math.abs(deltaX) < gameOptions.gemSize / 4) {
+      delta.row = -1; // Swipe up
+    } else if (deltaY < -gameOptions.gemSize / 2 && Math.abs(deltaX) < gameOptions.gemSize / 4) {
+      delta.row = 1; // Swipe down
+    }
+  
+    return delta;
+  }
+  
 
   stopSwipe() {
     this.dragging = false;
@@ -262,39 +292,49 @@ export default class Demo extends Scene {
   }
 
   handleMatches() {
-    // Инициализируем массив для отслеживания совпадений
+    console.log("markMatches function exists:", typeof this.markMatches === "function"); // Проверка наличия функции
+  
     this.removeMap = Array.from({ length: gameOptions.fieldSize }, () => Array(gameOptions.fieldSize).fill(0));
-    this.markMatches(HORIZONTAL);
-    this.markMatches(VERTICAL);
+    
+    if (typeof this.markMatches === "function") {
+      this.markMatches(HORIZONTAL);
+      this.markMatches(VERTICAL);
+    } else {
+      console.error("markMatches function is not defined in this context");
+    }
+  
     this.destroyGems();
   }
+  
 
   markMatches(direction: number) {
-    // Ищем и отмечаем серии совпадений по заданному направлению
-    for (let i = 0; i < gameOptions.fieldSize; i++) {
-      let colorStreak = 1, currentColor = -1, startStreak = 0;
-
-      for (let j = 0; j < gameOptions.fieldSize; j++) {
-        const colorToWatch = (direction === HORIZONTAL) ? this.gemAt(i, j).gemColor : this.gemAt(j, i).gemColor;
-
+    const { fieldSize } = gameOptions;
+  
+    for (let i = 0; i < fieldSize; i++) {
+      let colorStreak = 1;
+      let startStreak = 0;
+      let currentColor = -1;
+  
+      for (let j = 0; j <= fieldSize; j++) {  // j <= fieldSize, чтобы обработать конец ряда
+        const colorToWatch = (j < fieldSize) 
+          ? (direction === HORIZONTAL ? this.gemAt(i, j).gemColor : this.gemAt(j, i).gemColor)
+          : -1;  // Искусственное завершение ряда для обработки последней серии
+  
         if (colorToWatch === currentColor) {
           colorStreak++;
         } else {
           if (colorStreak >= 3) {
-            // Если найдена серия, отмечаем совпадения в removeMap
             this.updateRemoveMap(i, startStreak, colorStreak, direction);
           }
-          startStreak = j;
+          startStreak = j;  // Начинаем новую серию
           colorStreak = 1;
           currentColor = colorToWatch;
         }
       }
-
-      if (colorStreak >= 3) {
-        this.updateRemoveMap(i, startStreak, colorStreak, direction);
-      }
     }
   }
+  
+  
 
   updateRemoveMap(i: number, startStreak: number, colorStreak: number, direction: number) {
     for (let k = 0; k < colorStreak; k++) {
@@ -307,64 +347,81 @@ export default class Demo extends Scene {
   }
 
   destroyGems() {
-    // Обновляем счетчик совпадений и при необходимости увеличиваем множитель игрока
     this.matches++;
+    
+    // Увеличиваем множитель, если счет совпадений кратен 3
     if (this.matches % 3 === 0) {
       this.userScore++;
-      // store.dispatch(actions.setUserMultiplier(this.userScore)); // Предполагаемое обновление UI
+      // store.dispatch(actions.setUserMultiplier(this.userScore)); // Обновление UI
     }
-
-    // Удаление совпавших камней с анимацией
+  
     let destroyed = 0;
-    for (let i = 0; i < gameOptions.fieldSize; i++) {
-      for (let j = 0; j < gameOptions.fieldSize; j++) {
+  
+    const onGemDestroyed = (i, j) => {
+      destroyed--;
+      this.gameArray[i][j].gemSprite.visible = false;
+      this.poolArray.push(this.gameArray[i][j].gemSprite);
+      this.gameArray[i][j].isEmpty = true;
+  
+      // Проверяем, если все уничтоженные камни обработаны, чтобы заполнить поле новыми камнями
+      if (destroyed === 0) {
+        this.makeGemsFall();
+        this.replenishField();
+      }
+    };
+  
+    this.gameArray.forEach((row, i) => {
+      row.forEach((tile, j) => {
         if (this.removeMap[i][j] > 0) {
           destroyed++;
+          
+          // Анимация исчезновения
           this.tweens.add({
-            targets: this.gameArray[i][j].gemSprite,
+            targets: tile.gemSprite,
             alpha: 0,
             duration: gameOptions.destroySpeed,
             callbackScope: this,
-            onComplete: () => {
-              destroyed--;
-              this.gameArray[i][j].gemSprite.visible = false;
-              this.poolArray.push(this.gameArray[i][j].gemSprite);
-
-              // Заполняем поле новыми камнями после завершения уничтожения
-              if (destroyed === 0) {
-                this.makeGemsFall();
-                this.replenishField();
-              }
-            }
+            onComplete: () => onGemDestroyed(i, j),
           });
-          this.gameArray[i][j].isEmpty = true;
         }
-      }
-    }
+      });
+    });
   }
-
   makeGemsFall() {
-    for (let i = gameOptions.fieldSize - 2; i >= 0; i--) {
-      for (let j = 0; j < gameOptions.fieldSize; j++) {
-        if (!this.gameArray[i][j].isEmpty) {
-          let fallTiles = this.holesBelow(i, j)
-          if (fallTiles > 0) {
-            this.tweens.add({
-              targets: this.gameArray[i][j].gemSprite,
-              y: this.gameArray[i][j].gemSprite.y + fallTiles * gameOptions.gemSize,
-              duration: gameOptions.fallSpeed * fallTiles
-            })
-            this.gameArray[i + fallTiles][j] = {
-              gemSprite: this.gameArray[i][j].gemSprite,
-              gemColor: this.gameArray[i][j].gemColor,
-              isEmpty: false
-            }
-            this.gameArray[i][j].isEmpty = true
-          }
+    const { fieldSize, gemSize, fallSpeed } = gameOptions;
+  
+    for (let j = 0; j < fieldSize; j++) {
+      let emptySpace = 0;
+  
+      for (let i = fieldSize - 1; i >= 0; i--) {
+        const tile = this.gameArray[i][j];
+  
+        if (tile.isEmpty) {
+          emptySpace++;
+        } else if (emptySpace > 0) {
+          const { gemSprite } = tile;
+          const targetY = gemSprite.y + emptySpace * gemSize;
+  
+          // Анимация падения
+          this.tweens.add({
+            targets: gemSprite,
+            y: targetY,
+            duration: fallSpeed * emptySpace,
+          });
+  
+          // Обновляем игровое поле
+          this.gameArray[i + emptySpace][j] = {
+            gemColor: tile.gemColor, // Сохраняем цвет
+            gemSprite: tile.gemSprite, // Сохраняем спрайт
+            isEmpty: false
+          };
+          this.gameArray[i][j].isEmpty = true; // Очищаем ячейку
         }
       }
     }
   }
+  
+  
   holesBelow(row: number, col: number) {
     let result = 0
     for (let i = row + 1; i < gameOptions.fieldSize; i++) {
@@ -376,41 +433,44 @@ export default class Demo extends Scene {
   }
   replenishField() {
     let replenished = 0;
-
+    const { fieldSize, gemSize, fallSpeed, gemColors } = gameOptions;
+  
     const animateGemFall = (gemSprite, targetY, emptySpots) => {
       this.tweens.add({
         targets: gemSprite,
         y: targetY,
-        duration: gameOptions.fallSpeed * emptySpots,
+        duration: fallSpeed * emptySpots,
         callbackScope: this,
-        onComplete: () => onGemFallComplete(),
+        onComplete: onGemFallComplete,
       });
     };
-
+  
     const setupGem = (i, j, emptySpots) => {
       replenished++;
-      const randomColor = Phaser.Math.Between(0, gameOptions.gemColors - 1);
-      const { gemSize } = gameOptions;
-
-      this.gameArray[i][j].gemColor = randomColor;
-      this.gameArray[i][j].gemSprite = this.poolArray.pop();
-      this.gameArray[i][j].gemSprite.setFrame(randomColor);
-      this.gameArray[i][j].gemSprite.visible = true;
-      this.gameArray[i][j].gemSprite.x = gemSize * j + gemSize / 2;
-      this.gameArray[i][j].gemSprite.y = gemSize / 2 - (emptySpots - i) * gemSize;
-      this.gameArray[i][j].gemSprite.alpha = 1;
-      this.gameArray[i][j].isEmpty = false;
-
-      animateGemFall(this.gameArray[i][j].gemSprite, gemSize * i + gemSize / 2, emptySpots);
+      const randomColor = Phaser.Math.Between(0, gemColors - 1);
+  
+      // Создаем и настраиваем новый камень
+      const gemSprite = this.poolArray.pop();
+      gemSprite.setFrame(randomColor);
+      gemSprite.visible = true;
+      gemSprite.alpha = 1;
+      gemSprite.x = gemSize * j + gemSize / 2;
+      gemSprite.y = gemSize / 2 - (emptySpots - i) * gemSize;
+  
+      // Обновляем ячейку в gameArray
+      this.gameArray[i][j] = { gemColor: randomColor, gemSprite, isEmpty: false };
+  
+      // Анимация падения
+      animateGemFall(gemSprite, gemSize * i + gemSize / 2, emptySpots);
     };
-
+  
     const onGemFallComplete = () => {
       replenished--;
       if (replenished === 0) {
         if (this.matchInBoard()) {
           this.time.addEvent({
             delay: 250,
-            callback: () => this.handleMatches(),
+            callback: this.handleMatches.bind(this), // Привязываем контекст `this`
           });
         } else {
           this.canPick = true;
@@ -418,14 +478,13 @@ export default class Demo extends Scene {
         }
       }
     };
-
-    for (let j = 0; j < gameOptions.fieldSize; j++) {
+  
+    for (let j = 0; j < fieldSize; j++) {
       const emptySpots = this.holesInCol(j);
-      for (let i = 0; i < emptySpots; i++) {
-        setupGem(i, j, emptySpots);
-      }
+      Array.from({ length: emptySpots }).forEach((_, i) => setupGem(i, j, emptySpots));
     }
   }
+  
 
   holesInCol(col: number) {
     var result = 0
